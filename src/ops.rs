@@ -10,11 +10,6 @@
 use std::ops::{Add, Mul};
 use super::BigUint;
 
-fn add_with_carry(a: u64, b: u64) -> (u64, u64) {
-    let c = a as u128 + b as u128;
-    (c as u64, (c >> 64) as u64)
-}
-
 fn mul_with_carry(a: u64, b: u64) -> (u64, u64) {
     let c = a as u128 * b as u128;
     (c as u64, (c >> 64) as u64)
