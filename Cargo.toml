@@ -1,7 +1,12 @@
 [package]
-name = "littlebigint"
+name = "smallbigint"
 version = "0.1.0"
-authors = ["Matt Brubeck <mbrubeck@limpet.net>"]
 edition = "2018"
+authors = ["Matt Brubeck <mbrubeck@limpet.net>"]
+license = "MIT / Apache-2.0"
+repository = "https://github.com/mbrubeck/smallbigint"
+keywords = ["bignum", "bigint", "math", "number"]
+categories = ["science"]
+readme = "README.md"
 
 [dependencies]
