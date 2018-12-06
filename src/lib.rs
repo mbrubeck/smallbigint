@@ -10,6 +10,8 @@
 #[cfg(test)]
 mod tests;
 
+mod ops;
+
 use std::{
     fmt,
     mem::forget,
@@ -18,25 +20,25 @@ use std::{
 
 /// If the lowest bit of `data` is set, then the remaining bits of `data`
 /// are a pointer to a heap allocation.
-const HEAP_FLAG: usize = 1;
+const HEAP_FLAG: u64 = 1;
 
 /// The largest value that can be stored inline.
-const INLINE_MAX: usize = !0 >> 1;
+const INLINE_MAX: u64 = !0 >> 1;
 
 #[derive(Default, Eq)]
 pub struct BigUint {
-    data: usize,
+    data: u64,
 }
 
 impl BigUint {
     /// Create a `BigUint` with `n` words of capacity pre-allocated on the heap.
     pub fn with_capacity(n: usize) -> Self {
-        assert!(n < usize::max_value(), "capacity overflow");
+        assert!((n as u64) < u64::max_value(), "capacity overflow");
 
         let mut v = vec![0; n + 1];
-        v[0] = v.capacity(); // Capacity is stored in the first element.
+        v[0] = v.capacity() as u64; // Capacity is stored in the first element.
 
-        let data = v.as_ptr() as usize | HEAP_FLAG;
+        let data = v.as_ptr() as u64 | HEAP_FLAG;
         forget(v);
 
         Self { data }
@@ -53,44 +55,43 @@ impl BigUint {
     }
 
     /// Raw pointer to the heap allocation.
-    fn heap_ptr(&self) -> Option<*mut usize> {
+    fn heap_ptr(&self) -> Option<*mut u64> {
         if self.is_heap() {
-            Some((self.data & !HEAP_FLAG) as *mut usize)
+            Some((self.data & !HEAP_FLAG) as *mut u64)
         } else {
             None
         }
     }
 
     /// The entire heap buffer, including the length header and the value.
-    fn heap_storage(&self) -> Option<&[usize]> {
+    fn heap_storage(&self) -> Option<&[u64]> {
         let ptr = self.heap_ptr()?;
         unsafe {
-            Some(slice::from_raw_parts(ptr, *ptr))
+            let cap = *ptr as usize;
+            Some(slice::from_raw_parts(ptr, cap))
+        }
+    }
+
+    /// The entire heap buffer, including the length header and the value.
+    fn heap_storage_mut(&mut self) -> Option<&mut [u64]> {
+        let ptr = self.heap_ptr()?;
+        unsafe {
+            let cap = *ptr as usize;
+            Some(slice::from_raw_parts_mut(ptr, cap))
         }
     }
 
     /// Just the value portion of the heap buffer.
-    fn heap_value(&self) -> Option<&[usize]> {
-        let ptr = self.heap_ptr()?;
-        unsafe {
-            Some(slice::from_raw_parts(ptr.add(1), *ptr - 1))
-        }
+    fn heap_value(&self) -> Option<&[u64]> {
+        Some(&self.heap_storage()?[1..])
     }
 
     /// Just the value portion of the heap buffer.
-    fn heap_value_mut(&mut self) -> Option<&mut [usize]> {
-        let ptr = self.heap_ptr()?;
-        unsafe {
-            Some(slice::from_raw_parts_mut(ptr.add(1), *ptr - 1))
-        }
+    fn heap_value_mut(&mut self) -> Option<&mut [u64]> {
+        Some(&mut self.heap_storage_mut()?[1..])
     }
 
-    fn from_inline_val(n: usize) -> Self {
-        debug_assert!(n < INLINE_MAX);
-        Self { data: n << 1 }
-    }
-
-    fn inline_val(&self) -> Option<usize> {
+    fn inline_val(&self) -> Option<u64> {
         if self.is_inline() {
             Some(self.data >> 1)
         } else {
@@ -101,9 +102,9 @@ impl BigUint {
 
 impl Drop for BigUint {
     fn drop(&mut self) {
-        if let Some(ptr) = self.heap_ptr() {
+        if let Some(v) = self.heap_storage_mut() {
             unsafe {
-                drop(Vec::from_raw_parts(ptr, *ptr, *ptr));
+                Vec::from_raw_parts(v.as_mut_ptr(), v.len(), v.len());
             }
         }
     }
@@ -113,7 +114,7 @@ impl Clone for BigUint {
     fn clone(&self) -> Self {
         if let Some(storage) = self.heap_storage() {
             let v = storage.to_vec();
-            let data = v.as_ptr() as usize | HEAP_FLAG;
+            let data = v.as_ptr() as u64 | HEAP_FLAG;
             forget(v);
 
             Self { data }
@@ -139,13 +140,13 @@ impl fmt::Debug for BigUint {
     }
 }
 
-impl From<usize> for BigUint {
-    fn from(n: usize) -> Self {
-        if n < INLINE_MAX {
-            Self::from_inline_val(n)
+impl From<u64> for BigUint {
+    fn from(n: u64) -> Self {
+        if n <= INLINE_MAX {
+            Self { data: n << 1 }
         } else {
             let mut x = Self::with_capacity(1);
-            x.heap_value_mut().unwrap()[1] = n;
+            x.heap_value_mut().unwrap()[0] = n;
             x
         }
     }
@@ -162,7 +163,7 @@ impl PartialEq for BigUint {
     }
 }
 
-fn eq(a: &[usize], b: &[usize]) -> bool {
+fn eq(a: &[u64], b: &[u64]) -> bool {
     if a.len() == b.len() {
         a == b
     } else {
@@ -170,7 +171,7 @@ fn eq(a: &[usize], b: &[usize]) -> bool {
     }
 }
 
-fn strip_trailing_zeros(v: &[usize]) -> &[usize] {
+fn strip_trailing_zeros(v: &[u64]) -> &[u64] {
     if let Some(i) = v.iter().rposition(|x| *x != 0) {
         &v[..i + 1]
     } else {
