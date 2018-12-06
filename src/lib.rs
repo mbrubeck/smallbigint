@@ -163,5 +163,17 @@ impl PartialEq for BigUint {
 }
 
 fn eq(a: &[usize], b: &[usize]) -> bool {
-    unimplemented!()
+    if a.len() == b.len() {
+        a == b
+    } else {
+        strip_trailing_zeros(a) == strip_trailing_zeros(b)
+    }
+}
+
+fn strip_trailing_zeros(v: &[usize]) -> &[usize] {
+    if let Some(i) = v.iter().rposition(|x| *x != 0) {
+        &v[..i + 1]
+    } else {
+        &[]
+    }
 }

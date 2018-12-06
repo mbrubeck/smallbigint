@@ -22,3 +22,16 @@ fn eq_inline() {
     assert_ne!(BigUint::from(0), BigUint::from(1));
     assert_ne!(BigUint::from(1), BigUint::from(0));
 }
+
+#[test]
+fn strip_trailing_zeros() {
+    assert_eq!(super::strip_trailing_zeros(&[]), &[]);
+    assert_eq!(super::strip_trailing_zeros(&[1]), &[1]);
+    assert_eq!(super::strip_trailing_zeros(&[1, 2, 3]), &[1, 2, 3]);
+    assert_eq!(super::strip_trailing_zeros(&[1, 0]), &[1]);
+    assert_eq!(super::strip_trailing_zeros(&[1, 0, 0]), &[1]);
+    assert_eq!(super::strip_trailing_zeros(&[1, 0, 0, 0]), &[1]);
+    assert_eq!(super::strip_trailing_zeros(&[1, 2, 0, 0]), &[1, 2]);
+    assert_eq!(super::strip_trailing_zeros(&[0, 2, 0, 0]), &[0, 2]);
+    assert_eq!(super::strip_trailing_zeros(&[0, 0, 0]), &[]);
+}
