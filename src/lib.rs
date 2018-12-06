@@ -18,17 +18,20 @@ use std::{
     slice,
 };
 
+/// An arbitrary-precision integer that is 64 bits wide, and can store data either
+/// inline or on the heap.  Optimized for the case where the value fits in less
+/// than 64 bits.
+#[derive(Default, Eq)]
+pub struct BigUint {
+    data: u64,
+}
+
 /// If the lowest bit of `data` is set, then the remaining bits of `data`
 /// are a pointer to a heap allocation.
 const HEAP_FLAG: u64 = 1;
 
 /// The largest value that can be stored inline.
 const INLINE_MAX: u64 = !0 >> 1;
-
-#[derive(Default, Eq)]
-pub struct BigUint {
-    data: u64,
-}
 
 impl BigUint {
     /// Creates a `BigUint` from the bits in the provided slice.
