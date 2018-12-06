@@ -31,6 +31,16 @@ pub struct BigUint {
 }
 
 impl BigUint {
+    /// Creates a `BigUint` from the bits in the provided slice.
+    ///
+    /// The order of the slice is from least significant 64-bit word to most-significant.  For
+    /// example, 2^128 is represented as `[0, 0, 1]`.
+    pub fn from_slice(v: &[u64]) -> Self {
+        let mut result = Self::with_capacity(v.len());
+        result.heap_value_mut().unwrap().copy_from_slice(v);
+        result
+    }
+
     /// Create a `BigUint` with `n` words of capacity pre-allocated on the heap.
     pub fn with_capacity(n: usize) -> Self {
         assert!((n as u64) < u64::max_value(), "capacity overflow");

@@ -47,7 +47,7 @@ fn mul_inline_spill() {
     let a = BigUint::from(1 << 62);
     let b = BigUint::from(1 << 62);
     let c = a * b;
-    assert_eq!(c.heap_value(), Some(&[0, 1 << 60][..])); // 2^124 = 2^60 * 2^64
+    assert_eq!(c, BigUint::from_slice(&[0, 1 << 60])); // 2^124 = 2^60 * 2^64
 }
 
 #[test]
