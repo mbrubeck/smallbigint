@@ -7,7 +7,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::ops::{Add, Mul};
+use std::{ops::{Add, Mul}, cmp::max};
 use super::BigUint;
 
 fn mul_with_carry(a: u64, b: u64) -> (u64, u64) {
@@ -20,12 +20,44 @@ impl Add for BigUint {
 
     fn add(self, other: Self) -> Self {
         match (self.inline_val(), other.inline_val()) {
-            (Some(a), Some(b)) => {
-                // Can't overflow because INLINE_MAX < u64::MAX / 2.
-                Self::from(a + b)
+            (Some(a), Some(b)) => Self::from(a + b),
+            (None, None) => {
+                let mut a = self.into_storage().unwrap();
+                let b = other.heap_value().unwrap();
+                add_assign(&mut a, b);
+                Self::from_storage(a)
             }
-            _ => unimplemented!()
+            (Some(a), None) => {
+                let mut b = other.into_storage().unwrap();
+                add_assign(&mut b, &[a]);
+                Self::from_storage(b)
+            }
+            (None, Some(b)) => {
+                let mut a = self.into_storage().unwrap();
+                add_assign(&mut a, &[b]);
+                Self::from_storage(a)
+            }
         }
+    }
+}
+
+fn add_assign(a: &mut Vec<u64>, b: &[u64]) {
+    // Ensure there's space in `a` for all digits in `a` and `b` plus a carry digit.
+    // TODO: Don't grow so eagerly?
+    let cap = max(a.len(), b.len() + 1) + 1;
+    a.resize(cap, 0);
+
+    let mut carry = false;
+    for (x, y) in a[1..].iter_mut().zip(b) {
+        *x = x.wrapping_add(*y);
+        if carry {
+            *x = x.wrapping_add(1);
+        }
+        carry = *x < *y || (carry && *x == *y);
+    }
+    if carry {
+        let x = &mut a[b.len() + 1];
+        *x = x.wrapping_add(1);
     }
 }
 

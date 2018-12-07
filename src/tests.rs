@@ -29,6 +29,24 @@ fn add_inline() {
 }
 
 #[test]
+fn add_heap() {
+    assert_eq!(BigUint::from_slice(&[0, 1]) + BigUint::from(1), BigUint::from_slice(&[1, 1]));
+    assert_eq!(BigUint::from(2) + BigUint::from_slice(&[0, 1]), BigUint::from_slice(&[2, 1]));
+    assert_eq!(
+        BigUint::from_slice(&[0, 1]) +
+        BigUint::from_slice(&[2, 2]),
+        BigUint::from_slice(&[2, 3]));
+    assert_eq!(
+        BigUint::from_slice(&[0, 1 << 63]) +
+        BigUint::from_slice(&[0, 1 << 63]),
+        BigUint::from_slice(&[0, 0, 1]));
+    assert_eq!(
+        BigUint::from_slice(&[1 << 63, 1, 1]) +
+        BigUint::from_slice(&[1 << 63]),
+        BigUint::from_slice(&[0, 2, 1]));
+}
+
+#[test]
 fn add_inline_spill() {
     let a = BigUint::from(1 << 62);
     let b = BigUint::from(1 << 62);

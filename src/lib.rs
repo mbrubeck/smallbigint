@@ -46,8 +46,7 @@ impl BigUint {
 
     /// Create a `BigUint` with `n` words of storage pre-allocated on the heap.
     fn with_capacity(n: usize) -> Self {
-        let mut vec = vec![0; n + 1];
-        vec[0] = vec.capacity() as u64; // Capacity is stored in the first element.
+        let vec = vec![0; n + 1];
         Self::from_storage(vec)
     }
 
@@ -118,7 +117,11 @@ impl BigUint {
     }
 
     /// Construct a `BigUint` from a `Vec` containing its internal storage format.
-    fn from_storage(vec: Vec<u64>) -> Self {
+    fn from_storage(mut vec: Vec<u64>) -> Self {
+        // Ensure length and capacity are equal, and capacity is up-to-date.
+        vec.resize(vec.capacity(), 0);
+        vec[0] = vec.capacity() as u64;
+
         let data = vec.as_ptr() as u64 | HEAP_FLAG;
         forget(vec);
         Self { data }
@@ -146,7 +149,7 @@ impl fmt::Display for BigUint {
         if let Some(n) = self.inline_val() {
             write!(f, "{}", n)
         } else {
-            unimplemented!()
+            write!(f, "{:?}", self.heap_value().unwrap()) // TODO
         }
     }
 }
