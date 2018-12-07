@@ -56,6 +56,13 @@ fn add_inline_spill() {
 }
 
 #[test]
+fn add_assign() {
+    let mut x = BigUint::from(1);
+    x += BigUint::from(2);
+    assert_eq!(x, BigUint::from(3));
+}
+
+#[test]
 fn mul_inline() {
     assert_eq!(BigUint::from(2) * BigUint::from(2), BigUint::from(4));
 }

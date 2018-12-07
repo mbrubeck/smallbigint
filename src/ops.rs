@@ -7,7 +7,11 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::{ops::{Add, Mul}, cmp::max};
+use std::{
+    cmp::max,
+    mem::replace,
+    ops::{Add, AddAssign, Mul},
+};
 use super::BigUint;
 
 fn mul_with_carry(a: u64, b: u64) -> (u64, u64) {
@@ -38,6 +42,12 @@ impl Add for BigUint {
                 Self::from_storage(a)
             }
         }
+    }
+}
+
+impl AddAssign for BigUint {
+    fn add_assign(&mut self, other: Self) {
+        *self = replace(self, Self::default()) + other;
     }
 }
 
