@@ -14,7 +14,7 @@ mod ops;
 
 use std::{
     fmt,
-    mem::forget,
+    mem::{forget, replace},
     slice,
 };
 
@@ -44,17 +44,11 @@ impl BigUint {
         result
     }
 
-    /// Create a `BigUint` with `n` words of capacity pre-allocated on the heap.
-    pub fn with_capacity(n: usize) -> Self {
-        assert!((n as u64) < u64::max_value(), "capacity overflow");
-
-        let mut v = vec![0; n + 1];
-        v[0] = v.capacity() as u64; // Capacity is stored in the first element.
-
-        let data = v.as_ptr() as u64 | HEAP_FLAG;
-        forget(v);
-
-        Self { data }
+    /// Create a `BigUint` with `n` words of storage pre-allocated on the heap.
+    fn with_capacity(n: usize) -> Self {
+        let mut vec = vec![0; n + 1];
+        vec[0] = vec.capacity() as u64; // Capacity is stored in the first element.
+        Self::from_storage(vec)
     }
 
     /// If the rightmost bit is set, then we treat it as inline storage.
@@ -111,26 +105,36 @@ impl BigUint {
             None
         }
     }
+
+    /// Convert a heap-allocated `BigUint` into a `Vec` containing its internal storage format.
+    fn into_storage(self) -> Option<Vec<u64>> {
+        let heap_ptr = self.heap_ptr();
+        forget(self);
+        unsafe {
+            let ptr = heap_ptr?;
+            let cap = *ptr as usize;
+            Some(Vec::from_raw_parts(ptr, cap, cap))
+        }
+    }
+
+    /// Construct a `BigUint` from a `Vec` containing its internal storage format.
+    fn from_storage(vec: Vec<u64>) -> Self {
+        let data = vec.as_ptr() as u64 | HEAP_FLAG;
+        forget(vec);
+        Self { data }
+    }
 }
 
 impl Drop for BigUint {
     fn drop(&mut self) {
-        if let Some(v) = self.heap_storage_mut() {
-            unsafe {
-                Vec::from_raw_parts(v.as_mut_ptr(), v.len(), v.len());
-            }
-        }
+        replace(self, Self::default()).into_storage();
     }
 }
 
 impl Clone for BigUint {
     fn clone(&self) -> Self {
         if let Some(storage) = self.heap_storage() {
-            let v = storage.to_vec();
-            let data = v.as_ptr() as u64 | HEAP_FLAG;
-            forget(v);
-
-            Self { data }
+            Self::from_storage(storage.to_vec())
         } else {
             Self { data: self.data }
         }
