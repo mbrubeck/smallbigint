@@ -26,9 +26,9 @@ pub struct BigUint {
     data: u64,
 }
 
-/// If the lowest bit of `data` is set, then the remaining bits of `data`
-/// are a pointer to a heap allocation.
-const HEAP_FLAG: u64 = 1;
+/// If the highest bit of `data` is set, then the remaining bits of `data`
+/// are a pointer to a heap allocation (shifted right by 1).
+const HEAP_FLAG: u64 = 1 << 63;
 
 /// The largest value that can be stored inline.
 const INLINE_MAX: u64 = !0 >> 1;
@@ -63,7 +63,7 @@ impl BigUint {
     /// Raw pointer to the heap allocation.
     fn heap_ptr(&self) -> Option<*mut u64> {
         if self.is_heap() {
-            Some((self.data & !HEAP_FLAG) as *mut u64)
+            Some((self.data << 1) as *mut u64)
         } else {
             None
         }
@@ -99,7 +99,7 @@ impl BigUint {
 
     fn inline_val(&self) -> Option<u64> {
         if self.is_inline() {
-            Some(self.data >> 1)
+            Some(self.data)
         } else {
             None
         }
@@ -122,7 +122,7 @@ impl BigUint {
         vec.resize(vec.capacity(), 0);
         vec[0] = vec.capacity() as u64;
 
-        let data = vec.as_ptr() as u64 | HEAP_FLAG;
+        let data = (vec.as_ptr() as u64).rotate_right(1) | HEAP_FLAG;
         forget(vec);
         Self { data }
     }
@@ -163,7 +163,7 @@ impl fmt::Debug for BigUint {
 impl From<u64> for BigUint {
     fn from(n: u64) -> Self {
         if n <= INLINE_MAX {
-            Self { data: n << 1 }
+            Self { data: n }
         } else {
             let mut x = Self::with_capacity(1);
             x.heap_value_mut().unwrap()[0] = n;
